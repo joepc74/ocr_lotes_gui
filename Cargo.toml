@@ -1,0 +1,9 @@
+[package]
+name = "ocr_lotes_gui"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+eframe = "0.28" # Motor para la interfaz gráfica (egui)
+env = "1.0.1"
+textwrap = "0.16" # Para ajustar el texto en el log si es muy largo
