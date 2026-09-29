@@ -209,6 +209,17 @@ fn generar_pdf_ocr(ruta_pdf: PathBuf, logs: Arc<Mutex<Vec<String>>>, ctx: egui::
     for ruta_img in lista_rutas_borrar {
         let _ = std::fs::remove_file(ruta_img);
     }
+
+    // 5. Renombrado del archivo original a _original.pdf y del generado al nombre original
+    let ruta_original_renombrada = directorio.join(format!("{}_original.pdf", nombre_base));
+    let ruta_ocr_final = directorio.join(format!("{}_ocr.pdf", nombre_base));
+
+    if ruta_pdf.exists() {
+        let _ = std::fs::rename(&ruta_pdf, &ruta_original_renombrada);
+    }
+    if ruta_ocr_final.exists() {
+        let _ = std::fs::rename(&ruta_ocr_final, &ruta_pdf);
+    }
 }
 
 fn crear_icono() -> egui::IconData {
