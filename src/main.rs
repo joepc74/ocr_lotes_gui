@@ -1,4 +1,5 @@
 #![windows_subsystem = "windows"]
+#[cfg(target_os = "windows")]
 
 use eframe::egui;
 use std::fs::File;
@@ -8,6 +9,8 @@ use std::process::Command;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::env;
+#[cfg(target_os = "windows")]
+use std::os::windows::process::CommandExt;
 
 struct OcrApp {
     logs: Arc<Mutex<Vec<String>>>,
@@ -80,13 +83,13 @@ impl eframe::App for OcrApp {
             // 3. Capturar el evento de soltar archivos (Dropped Files)
             if !ctx.input(|i| i.raw.dropped_files.is_empty()) {
                 let archivos = ctx.input(|i| i.raw.dropped_files.clone());
-                
+
                 for archivo in archivos {
                     if let Some(ruta) = archivo.path {
                         if ruta.extension().and_then(|s| s.to_str()) == Some("pdf") {
                             let logs_clonados = Arc::clone(&self.logs);
                             let ctx_clonado = ctx.clone();
-                            
+
                             self.agregar_log(format!("🔄 Iniciando OCR: {:?}", ruta.file_name().unwrap_or_default()));
                             ctx.request_repaint();
 
@@ -114,7 +117,7 @@ fn generar_pdf_ocr(ruta_pdf: PathBuf, logs: Arc<Mutex<Vec<String>>>, ctx: egui::
 
     let nombre_base = ruta_pdf.file_stem().unwrap_or_default().to_string_lossy();
     let directorio = ruta_pdf.parent().unwrap_or_else(|| std::path::Path::new("."));
-    
+
     // Prefijo para las imágenes temporales
     let prefijo_imagenes = directorio.join(format!("{}_tmp_page", nombre_base));
 
@@ -131,9 +134,10 @@ fn generar_pdf_ocr(ruta_pdf: PathBuf, logs: Arc<Mutex<Vec<String>>>, ctx: egui::
             ruta_pdf.to_str().unwrap(), 
             prefijo_imagenes.to_str().unwrap()
         ])
+        .creation_flags(0x08000000) // Evitar ventana de consola en Windows
         .output();
 
-        if let Err(e) = output_pdf {
+    if let Err(e) = output_pdf {
         agregar_log(format!("❌ Error al ejecutar pdftoppm (Verifica Poppler): {}", e));
         return;
     }
@@ -146,7 +150,7 @@ fn generar_pdf_ocr(ruta_pdf: PathBuf, logs: Arc<Mutex<Vec<String>>>, ctx: egui::
     loop {
         let ruta_imagen = directorio.join(format!("{}_tmp_page-{}.png", nombre_base, pagina));
         if !ruta_imagen.exists() {
-            break; 
+            break;
         }
         // Tesseract necesita las rutas absolutas o relativas separadas por saltos de línea
         lista_imagenes.push_str(&format!("{}\n", ruta_imagen.to_str().unwrap()));
@@ -184,6 +188,7 @@ fn generar_pdf_ocr(ruta_pdf: PathBuf, logs: Arc<Mutex<Vec<String>>>, ctx: egui::
             "-l", "spa",
             "pdf" // <--- Aquí le indicamos que genere el formato PDF buscable
         ])
+        .creation_flags(0x08000000) // Evitar ventana de consola en Windows
         .output();
 
     match ocr_output {
@@ -250,7 +255,7 @@ fn main() -> eframe::Result<()> {
             .with_resizable(true),
         ..Default::default()
     };
-    
+
     eframe::run_native(
         "OCR por Lotes - Avata",
         opciones_ventana,
